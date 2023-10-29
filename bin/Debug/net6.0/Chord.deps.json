@@ -8,16 +8,16 @@
     ".NETCoreApp,Version=v6.0": {
       "Chord/1.0.0": {
         "dependencies": {
-          "Akka": "1.5.6",
+          "Akka": "1.5.13",
           "FSharp.Core": "6.0.7"
         },
         "runtime": {
           "Chord.dll": {}
         }
       },
-      "Akka/1.5.6": {
+      "Akka/1.5.13": {
         "dependencies": {
-          "Microsoft.Extensions.ObjectPool": "7.0.5",
+          "Microsoft.Extensions.ObjectPool": "7.0.10",
           "Newtonsoft.Json": "13.0.1",
           "System.Collections.Immutable": "5.0.0",
           "System.Configuration.ConfigurationManager": "6.0.1",
@@ -26,8 +26,8 @@
         },
         "runtime": {
           "lib/net6.0/Akka.dll": {
-            "assemblyVersion": "1.5.6.0",
-            "fileVersion": "1.5.6.0"
+            "assemblyVersion": "1.5.13.0",
+            "fileVersion": "1.5.13.0"
           }
         }
       },
@@ -80,11 +80,11 @@
           }
         }
       },
-      "Microsoft.Extensions.ObjectPool/7.0.5": {
+      "Microsoft.Extensions.ObjectPool/7.0.10": {
         "runtime": {
           "lib/netstandard2.0/Microsoft.Extensions.ObjectPool.dll": {
             "assemblyVersion": "7.0.0.0",
-            "fileVersion": "7.0.523.17410"
+            "fileVersion": "7.0.1023.36439"
           }
         }
       },
@@ -208,12 +208,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Akka/1.5.6": {
+    "Akka/1.5.13": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-7DmVo3bfQQ7QoxdBZ+qt0cb652hbfGsCwSj6v+UeOGIP7IkYbNUy+5e5xB01TmwqUgSHgNfLlsjMNGQ4dzxs2Q==",
-      "path": "akka/1.5.6",
-      "hashPath": "akka.1.5.6.nupkg.sha512"
+      "sha512": "sha512-FjEc5v2IjseksyWbTFgq43Aj1a4g7+thNENLcEcYbtbWRI59Y8km1k4v4rKaS0N6WPBXuTLCNjOi6sxbJPny8A==",
+      "path": "akka/1.5.13",
+      "hashPath": "akka.1.5.13.nupkg.sha512"
     },
     "FSharp.Core/6.0.7": {
       "type": "package",
@@ -222,12 +222,12 @@
       "path": "fsharp.core/6.0.7",
       "hashPath": "fsharp.core.6.0.7.nupkg.sha512"
     },
-    "Microsoft.Extensions.ObjectPool/7.0.5": {
+    "Microsoft.Extensions.ObjectPool/7.0.10": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-uylNo8wuzAeqAJDyLDUM2JWSpTdCHTp11BXCsCO68LXnDjxwDM4PL6mJmho/+fJesWKdcJV5XB/Oa80wAJXnvQ==",
-      "path": "microsoft.extensions.objectpool/7.0.5",
-      "hashPath": "microsoft.extensions.objectpool.7.0.5.nupkg.sha512"
+      "sha512": "sha512-gZtBCCoImzYA2P8gIAjSP1m2eCe75xpeRA3J5X/vtjmzue0FegzdqIM2VC3b+LJjzRPEqOQcKR+Fl2R+GoNe+Q==",
+      "path": "microsoft.extensions.objectpool/7.0.10",
+      "hashPath": "microsoft.extensions.objectpool.7.0.10.nupkg.sha512"
     },
     "Microsoft.Win32.SystemEvents/6.0.0": {
       "type": "package",
