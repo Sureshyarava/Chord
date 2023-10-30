@@ -60,7 +60,9 @@ let create (actor: String) (data: int) =
     let node = { ID = actor; FingerTable = new Dictionary<int, int>(); Data = data; Next = None }
     // Add the node to the dictionary with its ID as the key
     nodeList.[node.Data] <- node
+    node.Next <- Some node
     globalHead <- node.Data
+    nodeData <- List<int> nodeList.Keys
 
 // Function to join a new node to the circular linked list
 let join (name: string) (data: int) =
@@ -73,14 +75,23 @@ let join (name: string) (data: int) =
             Next = None
         }
     nodeList.[newNode.Data] <- newNode 
-    let keyValueSeq = nodeList |> Seq.cast<KeyValuePair<int, CircularListNode>>
-    let sortedSeq = Seq.sortBy (fun (kvp : KeyValuePair<int, CircularListNode>) -> kvp.Key) keyValueSeq
-    let nodeData1 = List(Dictionary(sortedSeq).Keys)
-    nodeData <- nodeData1
-    for i=1 to nodeData.Count-1 do
-        nodeList[nodeData1.[i-1]].Next <- Some nodeList[nodeData1.[i]]
-    nodeList[nodeData1.[nodeData1.Count-1]].Next <- Some nodeList[nodeData1.[0]]
-    globalHead <- nodeList[nodeData1.[0]].Data
+    if data < nodeData[0] || data > nodeData[nodeData.Count-1] then
+        let temp=nodeList[nodeData[nodeData.Count-1]].Next
+        newNode.Next<-temp
+        nodeList[nodeData[nodeData.Count-1]].Next<- Some newNode
+        if data < nodeData[0] then
+            nodeData.Insert(0,data)
+        else
+            nodeData.Add(data)
+    else
+        let mutable temp1=true
+        for i=1 to nodeData.Count-1 do
+            if temp1 && nodeData[i-1]<data && data <nodeData[i] then
+                let temp= nodeList[nodeData[i-1]].Next
+                newNode.Next<-temp
+                nodeList[nodeData[i-1]].Next <- Some newNode
+                nodeData.Insert(i,data)
+                temp1 <- false
 
 type MyActor(requestsCountdown: CountdownEvent) =
     inherit ReceiveActor()
@@ -120,7 +131,6 @@ let CreateFingerTable(id:int) =
         let key1= id+int32 (pown 2 (k - 1))
         let value1 = getSuccesor (key1 % (int32 (pown 2 m))) 
         nodeList.[id].FingerTable.Add(key1,value1)
-    printfn "Finger Table for id %d is %A" id nodeList.[id].FingerTable
 
 let system = 
     ActorSystem.Create("MySystem")
@@ -134,7 +144,6 @@ for i in 1 .. numberOfNodes do
     else
         join actorName uniqueNumber |> ignore
 
-printfn "After adding all the nodes in the CHORD Ring"
 for k in nodeData do
     CreateFingerTable k
 // Wait for all actors to finish their requests
