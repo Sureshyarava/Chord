@@ -32,9 +32,9 @@ let mutable numberOfNodes = 0
 let mutable numberOfRequests = 0
 
 let args = System.Environment.GetCommandLineArgs()
-if args.Length >= 3 then // here the first argument is the File name 
-    numberOfNodes <- int args.[2] // second argument is the number of nodes
-    numberOfRequests <- int args.[3] // third argument is the number of requests that need to be done 
+if args.Length >= 3 then // The first argument is the File name 
+    numberOfNodes <- int args.[2] // The second argument is the number of nodes
+    numberOfRequests <- int args.[3] // The third argument is the number of requests that need to be done 
 else
     printfn "Please provide two command-line arguments: NumberOfNodes and NumberOfRequests."
 
@@ -68,7 +68,7 @@ let join (name: string) (data: int) =
     let newNode =
         {
             ID = name
-            FingerTable = new Dictionary<int, int>()
+            FingerTable = new Dictionary<int32, int32>()
             Data = data
             Next = None
         }
@@ -78,10 +78,9 @@ let join (name: string) (data: int) =
     let nodeData1 = List(Dictionary(sortedSeq).Keys)
     nodeData <- nodeData1
     for i=1 to nodeData.Count-1 do
-        nodeList[nodeData1[i-1]].Next <- Some nodeList[nodeData1[i]]
-    nodeList[nodeData1[nodeData1.Count-1]].Next <- Some nodeList[nodeData1[0]]
-    globalHead <- nodeList[nodeData1[0]].Data
-
+        nodeList[nodeData1.[i-1]].Next <- Some nodeList[nodeData1.[i]]
+    nodeList[nodeData1.[nodeData1.Count-1]].Next <- Some nodeList[nodeData1.[0]]
+    globalHead <- nodeList[nodeData1.[0]].Data
 
 type MyActor(requestsCountdown: CountdownEvent) =
     inherit ReceiveActor()
@@ -107,6 +106,21 @@ type MyActor(requestsCountdown: CountdownEvent) =
 let createActor (actorSystem: ActorSystem) (name: string) =
     actorSystem.ActorOf(Props.Create(fun () -> MyActor(requestsCountdown)), name)
 
+let getSuccesor (key:int32) =
+    let mutable successor = -1
+    for k = 0 to nodeData.Count-2 do
+        if key > nodeData.[k] && key <= nodeData.[k+1] && successor = -1 then
+            successor <- nodeData.[k+1]
+    if successor = -1 then
+        successor <- nodeData.[0]
+    successor
+
+let CreateFingerTable(id:int) =
+    for k=1 to m do
+        let key1= id+int32 (pown 2 (k - 1))
+        let value1 = getSuccesor (key1 % (int32 (pown 2 m))) 
+        nodeList.[id].FingerTable.Add(key1,value1)
+    printfn "Finger Table for id %d is %A" id nodeList.[id].FingerTable
 
 let system = 
     ActorSystem.Create("MySystem")
@@ -114,24 +128,14 @@ let system =
 for i in 1 .. numberOfNodes do
     let uniqueNumber = generateUniqueRandomNumber maxvalue mutableSet    // Create actors with custom names
     let actorName = string uniqueNumber
-    createActor system actorName |>ignore
+    createActor system actorName |> ignore
     if i = 1 then
-        create actorName uniqueNumber |>ignore
+        create actorName uniqueNumber |> ignore
     else
         join actorName uniqueNumber |> ignore
 
 printfn "After adding all the nodes in the CHORD Ring"
-
-match Some nodeList.[globalHead] with
-    | Some currentHead ->
-        let rec printNodeData current =
-            printfn "Node ID: %A" current
-            match current.Next with
-            | Some nextNode when nextNode <> currentHead -> printNodeData nextNode
-            | Some nextNode when nextNode = currentHead -> printfn "Node ID: %s" current.ID
-            | _ -> () // stop
-
-        printNodeData currentHead
-    | _ -> printfn "nodeList is Empty"
+for k in nodeData do
+    CreateFingerTable k
 // Wait for all actors to finish their requests
 requestsCountdown.Wait()
