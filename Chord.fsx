@@ -5,7 +5,7 @@ open System.Threading.Tasks
 open System.Threading.Channels
 open System.Collections.Generic
 
-#r "nuget: Akka, 1.5.13"
+#r "nuget: Akka"
 
 open Akka.Actor
 
@@ -25,6 +25,8 @@ let generateUniqueRandomNumber (maxValue: int) (mutableSet: HashSet<int>) =
 let m = 20
 let maxvalue = int32 (pown 2 m - 1) // max range of values allowed to give for a node
 
+let keyList =List<int>()
+
 let mutableSet = HashSet<int>() // Used to store and tell if the random number is already been used
 
 let myList = LinkedList<int>() //Used to store Node keys
@@ -41,21 +43,21 @@ else
 // Create a CountdownEvent to coordinate starting and waiting for requests
 let requestsCountdown = CountdownEvent(numberOfNodes)
 
-type CircularListNode =
-    { ID: string
+type chord_Node =
+    { ID: IActorRef
       FingerTable: Dictionary<int, int>
       Data: int
-      mutable Next: CircularListNode option }
+      mutable Next: chord_Node option }
 
 // Define a global variable of type CircularListNode
 let mutable globalHead : int = -1
 
 // Dictionary to store circular linked list nodes
-let mutable nodeList = Dictionary<int, CircularListNode>()
+let mutable nodeList = Dictionary<int, chord_Node>()
 
 let mutable nodeData = List<int>()
 // Function to create a circular linked list node
-let create (actor: String) (data: int) =
+let create (actor: IActorRef) (data: int) =
     // Create a circular linked list node with the actor's name as ID
     let node = { ID = actor; FingerTable = new Dictionary<int, int>(); Data = data; Next = None }
     // Add the node to the dictionary with its ID as the key
@@ -65,7 +67,7 @@ let create (actor: String) (data: int) =
     nodeData <- List<int> nodeList.Keys
 
 // Function to join a new node to the circular linked list
-let join (name: string) (data: int) =
+let join (name: IActorRef) (data: int) =
 
     let newNode =
         {
@@ -93,6 +95,10 @@ let join (name: string) (data: int) =
                 nodeData.Insert(i,data)
                 temp1 <- false
 
+let calculateNumberOfHops (node1: int)(key : int) =
+    let hops=0.1
+    hops
+
 type MyActor(requestsCountdown: CountdownEvent) =
     inherit ReceiveActor()
 
@@ -104,7 +110,9 @@ type MyActor(requestsCountdown: CountdownEvent) =
             let mutable counter = 0
             while counter < numberOfRequests do
                 do! Async.Sleep(1000) // Sleep for 1 second
-                printfn "%s is requesting a function call: %d" (selfRef.Path.Name) counter
+                let nodeValue = int selfRef.Path.Name
+                let key=calculateNumberOfHops nodeValue keyList[counter]
+                printfn "number of hops from %s %f is " (selfRef.Path.Name)  key 
                 counter <- counter + 1
 
             printfn "%s has finished all requests" (selfRef.Path.Name)
@@ -115,7 +123,12 @@ type MyActor(requestsCountdown: CountdownEvent) =
 
 // Function to create an actor with a custom name
 let createActor (actorSystem: ActorSystem) (name: string) =
-    actorSystem.ActorOf(Props.Create(fun () -> MyActor(requestsCountdown)), name)
+    let actorref = actorSystem.ActorOf(Props.Create(fun () -> MyActor(requestsCountdown)), name)
+    actorref
+
+for i=1 to numberOfRequests do
+    let key=generateUniqueRandomNumber maxvalue mutableSet
+    keyList.Add(key)
 
 let getSuccesor (key:int32) =
     let mutable successor = -1
@@ -138,13 +151,15 @@ let system =
 for i in 1 .. numberOfNodes do
     let uniqueNumber = generateUniqueRandomNumber maxvalue mutableSet    // Create actors with custom names
     let actorName = string uniqueNumber
-    createActor system actorName |> ignore
+    let actor = createActor system actorName
     if i = 1 then
-        create actorName uniqueNumber |> ignore
+        create actor uniqueNumber 
     else
-        join actorName uniqueNumber |> ignore
+        join actor uniqueNumber 
 
 for k in nodeData do
     CreateFingerTable k
+
+printfn "The NodeList is %A" nodeList
 // Wait for all actors to finish their requests
 requestsCountdown.Wait()
