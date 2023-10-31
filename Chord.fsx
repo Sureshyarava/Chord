@@ -1,10 +1,6 @@
 open System.Collections.Generic
 open System
 open System.Threading
-open System.Threading.Tasks
-open System.Threading.Channels
-open System.Collections.Generic
-
 #r "nuget: Akka"
 
 open Akka.Actor
@@ -43,10 +39,13 @@ else
 // Create a CountdownEvent to coordinate starting and waiting for requests
 let requestsCountdown = CountdownEvent(numberOfNodes)
 
+for k=1 to numberOfRequests-1 do
+    keyList.Add(generateUniqueRandomNumber maxvalue mutableSet)
+
 type chord_Node =
     { ID: IActorRef
       FingerTable: Dictionary<int, int>
-      Data: int
+      key: int
       mutable Next: chord_Node option }
 
 // Define a global variable of type CircularListNode
@@ -57,45 +56,9 @@ let mutable nodeList = Dictionary<int, chord_Node>()
 
 let mutable nodeData = List<int>()
 // Function to create a circular linked list node
-let create (actor: IActorRef) (data: int) =
-    // Create a circular linked list node with the actor's name as ID
-    let node = { ID = actor; FingerTable = new Dictionary<int, int>(); Data = data; Next = None }
-    // Add the node to the dictionary with its ID as the key
-    nodeList.[node.Data] <- node
-    node.Next <- Some node
-    globalHead <- node.Data
-    nodeData <- List<int> nodeList.Keys
-
-// Function to join a new node to the circular linked list
-let join (name: IActorRef) (data: int) =
-
-    let newNode =
-        {
-            ID = name
-            FingerTable = new Dictionary<int32, int32>()
-            Data = data
-            Next = None
-        }
-    nodeList.[newNode.Data] <- newNode 
-    if data < nodeData[0] || data > nodeData[nodeData.Count-1] then
-        let temp=nodeList[nodeData[nodeData.Count-1]].Next
-        newNode.Next<-temp
-        nodeList[nodeData[nodeData.Count-1]].Next<- Some newNode
-        if data < nodeData[0] then
-            nodeData.Insert(0,data)
-        else
-            nodeData.Add(data)
-    else
-        let mutable temp1=true
-        for i=1 to nodeData.Count-1 do
-            if temp1 && nodeData[i-1]<data && data <nodeData[i] then
-                let temp= nodeList[nodeData[i-1]].Next
-                newNode.Next<-temp
-                nodeList[nodeData[i-1]].Next <- Some newNode
-                nodeData.Insert(i,data)
-                temp1 <- false
 
 let calculateNumberOfHops (node1: int)(key : int) =
+    // method to be implemented 
     let hops=0.1
     hops
 
@@ -112,7 +75,7 @@ type MyActor(requestsCountdown: CountdownEvent) =
                 do! Async.Sleep(1000) // Sleep for 1 second
                 let nodeValue = int selfRef.Path.Name
                 let key=calculateNumberOfHops nodeValue keyList[counter]
-                printfn "number of hops from %s %f is " (selfRef.Path.Name)  key 
+                printfn "number of hops from %s is %f" (selfRef.Path.Name)  key 
                 counter <- counter + 1
 
             printfn "%s has finished all requests" (selfRef.Path.Name)
@@ -139,14 +102,59 @@ let getSuccesor (key:int32) =
         successor <- nodeData.[0]
     successor
 
-let CreateFingerTable(id:int) =
+let UpdateFingerTable(id:int) =
     for k=1 to m do
         let key1= id+int32 (pown 2 (k - 1))
         let value1 = getSuccesor (key1 % (int32 (pown 2 m))) 
-        nodeList.[id].FingerTable.Add(key1,value1)
+        nodeList.[id].FingerTable[key1] <- value1
 
-let system = 
-    ActorSystem.Create("MySystem")
+let create (actor: IActorRef) (data: int) =
+    // Create a circular linked list node with the actor's name as ID
+    let node = { ID = actor; FingerTable = new Dictionary<int, int>(); key = data; Next = None }
+    // Add the node to the dictionary with its ID as the key
+    nodeList.[node.key] <- node
+    node.Next <- Some node
+    globalHead <- node.key
+    nodeData <- List<int> nodeList.Keys
+
+    for k in nodeData do
+        UpdateFingerTable k
+
+// Function to join a new node to the circular linked list
+let join (name: IActorRef) (data: int) =
+
+    let newNode =
+        {
+            ID = name
+            FingerTable = new Dictionary<int32, int32>()
+            key = data
+            Next = None
+        }
+    nodeList.[newNode.key] <- newNode 
+    if data < nodeData[0] || data > nodeData[nodeData.Count-1] then
+        let temp=nodeList[nodeData[nodeData.Count-1]].Next
+        newNode.Next<-temp
+        nodeList[nodeData[nodeData.Count-1]].Next<- Some newNode
+        if data < nodeData[0] then
+            nodeData.Insert(0,data)
+        else
+            nodeData.Add(data)
+    else
+        let mutable temp1=true
+        for i=1 to nodeData.Count-1 do
+            if temp1 && nodeData[i-1]<data && data <nodeData[i] then
+                let temp= nodeList[nodeData[i-1]].Next
+                newNode.Next<-temp
+                nodeList[nodeData[i-1]].Next <- Some newNode
+                nodeData.Insert(i,data)
+                temp1 <- false
+    for k in nodeData do
+        UpdateFingerTable k
+
+
+
+let system =
+    ActorSystem.Create("ChordSystem")
 
 for i in 1 .. numberOfNodes do
     let uniqueNumber = generateUniqueRandomNumber maxvalue mutableSet    // Create actors with custom names
@@ -157,9 +165,5 @@ for i in 1 .. numberOfNodes do
     else
         join actor uniqueNumber 
 
-for k in nodeData do
-    CreateFingerTable k
-
-printfn "The NodeList is %A" nodeList
 // Wait for all actors to finish their requests
 requestsCountdown.Wait()
