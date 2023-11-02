@@ -57,10 +57,27 @@ let mutable nodeList = Dictionary<int, chord_Node>()
 let mutable nodeData = List<int>()
 // Function to create a circular linked list node
 
-let calculateNumberOfHops (node1: int)(key : int) =
-    // method to be implemented 
-    let hops=0.1
-    hops
+let calculateNumberOfHops (startNodeKey: int) (lookupKey: int) =
+    let rec loop currentNodeKey hops =
+        if currentNodeKey = lookupKey then hops
+        else
+            let node = nodeList.[currentNodeKey]
+            let mutable closestPrecedingNodeKey = currentNodeKey
+
+            for keyValue in node.FingerTable.Keys do
+                let fingerValue = node.FingerTable.[keyValue]
+                if (currentNodeKey < keyValue) && (keyValue <= lookupKey) && (fingerValue > closestPrecedingNodeKey) then
+                    closestPrecedingNodeKey <- fingerValue
+
+            if closestPrecedingNodeKey = currentNodeKey then
+                // The key doesn't exist in the network or something went wrong
+                hops
+            else
+                loop closestPrecedingNodeKey (hops + 1)
+
+    loop startNodeKey 0
+
+let mutable hopCount =0;
 
 type MyActor(requestsCountdown: CountdownEvent) =
     inherit ReceiveActor()
@@ -75,12 +92,12 @@ type MyActor(requestsCountdown: CountdownEvent) =
                 do! Async.Sleep(1000) // Sleep for 1 second
                 let nodeValue = int selfRef.Path.Name
                 let key=calculateNumberOfHops nodeValue keyList[counter]
-                printfn "number of hops from %s is %f" (selfRef.Path.Name)  key 
+                hopCount <- hopCount+key
                 counter <- counter + 1
 
             printfn "%s has finished all requests" (selfRef.Path.Name)
             if requestsCountdown.Signal() then
-                printfn "All actors have finished their requests."
+                printfn "The average number of hops is %f" (float hopCount/ float (numberOfNodes*numberOfRequests))
                 Environment.Exit(0)
             } |> Async.Start
 
